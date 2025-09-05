@@ -1,0 +1,8 @@
+Bootstrap: docker
+From: debian:bullseye-slim
+
+%post
+    apt-get update && apt-get install -y python3 python3-setuptools git g++ make build-essential zlib1g-dev && rm -rf /var/lib/apt/lists/*
+    git clone https://github.com/rrwick/Unicycler.git
+    cd Unicycler
+    python3 setup.py install

@@ -1,0 +1,8 @@
+Bootstrap: docker
+From: python:3.11-slim
+
+%post
+    pip install multiqc==1.31
+    
+%runscript
+    multiqc "$@"

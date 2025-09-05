@@ -1,0 +1,24 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+%post
+    # Install system dependencies
+    apt-get update && apt-get install -y \
+        build-essential \
+        git \
+        python3 \
+        python3-pip \
+        zlib1g-dev \
+        && apt-get clean
+    
+    # Install Python dependencies
+    pip3 install networkx
+    
+    # Clone and install Porechop_ABI
+    cd /opt
+    git clone --depth 1 https://github.com/bonsai-team/Porechop_ABI.git
+    cd /opt/Porechop_ABI
+    python3 setup.py install
+
+%runscript
+    exec porechop_abi "$@"

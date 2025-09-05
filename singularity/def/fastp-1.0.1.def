@@ -1,0 +1,12 @@
+Bootstrap: docker
+From: ubuntu:20.04
+
+%post
+    apt-get update && apt-get install -y wget
+    wget http://opengene.org/fastp/fastp.1.0.1
+    chmod +x fastp.1.0.1
+    mv fastp.1.0.1 /usr/local/bin/fastp
+    apt-get clean
+
+%runscript
+    fastp "$@"

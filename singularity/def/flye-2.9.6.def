@@ -1,0 +1,9 @@
+Bootstrap: docker
+From: condaforge/miniforge3:latest
+
+%post
+    conda config --set channel_alias https://repo.prefix.dev/
+    conda config --add channels conda-forge
+    conda config --add channels bioconda
+    conda config --set channel_priority strict
+    conda install -y flye=2.9.6 && conda clean -a

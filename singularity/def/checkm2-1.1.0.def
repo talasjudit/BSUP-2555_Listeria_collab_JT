@@ -1,0 +1,16 @@
+Bootstrap: docker
+From: condaforge/miniforge3:latest
+
+%post
+    conda config --set channel_alias https://repo.prefix.dev/
+    conda config --add channels conda-forge
+    conda config --add channels bioconda
+    conda config --set channel_priority strict
+    conda install -y checkm2=1.1.0 && conda clean -a
+    
+    # Download and install the CheckM2 database
+    mkdir -p /opt/checkm2_db
+    checkm2 database --download --path /opt/checkm2_db
+    
+%environment
+    export CHECKM2DB="/opt/checkm2_db/CheckM2_database/uniref100.KO.1.dmnd"

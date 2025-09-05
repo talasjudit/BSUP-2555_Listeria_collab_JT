@@ -1,0 +1,9 @@
+Bootstrap: docker
+From: debian:bullseye-slim
+
+%post
+    apt-get update && apt-get install -y git g++ make zlib1g-dev
+    git clone https://github.com/rrwick/Filtlong.git
+    cd Filtlong
+    make -j
+    cp bin/filtlong /usr/local/bin
