@@ -3,4 +3,4 @@ data/
 singularity/sif
 output/
 logs/
-config.conf
+scripts/config.conf
