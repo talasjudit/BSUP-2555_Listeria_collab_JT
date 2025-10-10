@@ -48,26 +48,25 @@ echo "Illumina R2: ${illumina_r2}"
 # Determine assembly mode and find inputs
 unicycler_args="-1 ${illumina_r1} -2 ${illumina_r2}"
 
-# Check for existing Flye assembly first (hybrid mode with existing assembly)
+# Check for existing Flye assembly first
 flye_assembly="${work_dir}/${output_name}/05_assembly_flye/${current_sample}_flye.fasta"
+nanopore_input="${work_dir}/${output_name}/04_qc_nanopore_filtlong/${current_sample}_filtlong.fastq.gz"
 
-if [[ -f "${flye_assembly}" ]]; then
-    unicycler_args="${unicycler_args} --existing_long_read_assembly ${flye_assembly}"
+if [[ -f "${flye_assembly}" ]] && [[ -f "${nanopore_input}" ]]; then
+    # Hybrid mode with existing assembly - requires BOTH assembly AND reads
+    unicycler_args="${unicycler_args} -l ${nanopore_input} --existing_long_read_assembly ${flye_assembly}"
     assembly_mode="hybrid with existing long-read assembly (flye)"
     echo "Using Flye assembly: ${flye_assembly}"
+    echo "Using nanopore reads: ${nanopore_input}"
+elif [[ -f "${nanopore_input}" ]]; then
+    # Standard hybrid mode with nanopore reads only
+    unicycler_args="${unicycler_args} -l ${nanopore_input}"
+    assembly_mode="standard hybrid assembly"
+    echo "Using nanopore reads for hybrid assembly: ${nanopore_input}"
 else
-    # Use standard hybrid mode with nanopore reads
-    nanopore_input="${work_dir}/${output_name}/04_qc_nanopore_filtlong/${current_sample}_filtlong.fastq.gz"
-    
-    if [[ -f "${nanopore_input}" ]]; then
-        unicycler_args="${unicycler_args} -l ${nanopore_input}"
-        assembly_mode="standard hybrid assembly"
-        echo "Using nanopore reads for hybrid assembly: ${nanopore_input}"
-    else
-        echo "ERROR: No Flye assembly or nanopore reads found for sample ${current_sample}"
-        echo "Please run either 05_assembly_flye.slurm or 04_qc_nanopore_filtlong.slurm first"
-        exit 1
-    fi
+    echo "ERROR: Cannot find nanopore reads for sample ${current_sample}: ${nanopore_input}"
+    echo "Please run 04_qc_nanopore_filtlong.slurm first"
+    exit 1
 fi
 
 echo "Assembly mode: ${assembly_mode}"
@@ -81,10 +80,9 @@ mkdir -p ${tool_log_dir}
 # Set up singularity binding for input directories
 bind_dirs=()
 bind_dirs+=("$(dirname "${illumina_r1}")")
+bind_dirs+=("$(dirname "${nanopore_input}")")
 
-if [[ "${assembly_mode}" == "standard hybrid assembly" ]]; then
-    bind_dirs+=("$(dirname "${nanopore_input}")")
-elif [[ "${assembly_mode}" == "hybrid with existing long-read assembly (flye)" ]]; then
+if [[ "${assembly_mode}" == "hybrid with existing long-read assembly (flye)" ]]; then
     bind_dirs+=("$(dirname "${flye_assembly}")")
 fi
 
@@ -95,7 +93,7 @@ for dir in ${unique_dirs}; do
     input_bind_args="${input_bind_args} --bind ${dir}:${dir}"
 done
 
-singularity_image="${singularity_dir}/unicycler-0.5.0.sif"
+singularity_image="${singularity_dir}/unicycler-0.5.1.sif"
 
 # Run Unicycler assembly
 echo "Starting Unicycler assembly (${assembly_mode}) for ${current_sample}"
