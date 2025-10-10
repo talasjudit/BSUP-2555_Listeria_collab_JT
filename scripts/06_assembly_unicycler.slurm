@@ -48,13 +48,13 @@ echo "Illumina R2: ${illumina_r2}"
 # Determine assembly mode and find inputs
 unicycler_args="-1 ${illumina_r1} -2 ${illumina_r2}"
 
-# Check for existing Medaka-polished assembly first (hybrid mode with existing assembly)
-medaka_assembly="${work_dir}/${output_name}/06_polish_medaka/${current_sample}_medaka.fasta"
+# Check for existing Flye assembly first (hybrid mode with existing assembly)
+flye_assembly="${work_dir}/${output_name}/05_assembly_flye/${current_sample}_flye.fasta"
 
-if [[ -f "${medaka_assembly}" ]]; then
-    unicycler_args="${unicycler_args} --existing_long_read_assembly ${medaka_assembly}"
-    assembly_mode="hybrid with existing long-read assembly (medaka-polished)"
-    echo "Using Medaka-polished assembly: ${medaka_assembly}"
+if [[ -f "${flye_assembly}" ]]; then
+    unicycler_args="${unicycler_args} --existing_long_read_assembly ${flye_assembly}"
+    assembly_mode="hybrid with existing long-read assembly (flye)"
+    echo "Using Flye assembly: ${flye_assembly}"
 else
     # Use standard hybrid mode with nanopore reads
     nanopore_input="${work_dir}/${output_name}/04_qc_nanopore_filtlong/${current_sample}_filtlong.fastq.gz"
@@ -64,9 +64,8 @@ else
         assembly_mode="standard hybrid assembly"
         echo "Using nanopore reads for hybrid assembly: ${nanopore_input}"
     else
-        echo "ERROR: No Medaka assembly or nanopore reads found for sample ${current_sample}"
-        echo "Please run the nanopore processing steps (porechop + filtlong) or"
-        echo "the long-read assembly pipeline (flye + medaka) first"
+        echo "ERROR: No Flye assembly or nanopore reads found for sample ${current_sample}"
+        echo "Please run either 05_assembly_flye.slurm or 04_qc_nanopore_filtlong.slurm first"
         exit 1
     fi
 fi
@@ -74,7 +73,7 @@ fi
 echo "Assembly mode: ${assembly_mode}"
 
 # Create output directory using config variables
-output_dir="${work_dir}/${output_name}/07_assembly_unicycler"
+output_dir="${work_dir}/${output_name}/06_assembly_unicycler"
 mkdir -p ${output_dir}
 tool_log_dir="${log_dir}/unicycler"
 mkdir -p ${tool_log_dir}
@@ -85,8 +84,8 @@ bind_dirs+=("$(dirname "${illumina_r1}")")
 
 if [[ "${assembly_mode}" == "standard hybrid assembly" ]]; then
     bind_dirs+=("$(dirname "${nanopore_input}")")
-elif [[ "${assembly_mode}" == "hybrid with existing long-read assembly (medaka-polished)" ]]; then
-    bind_dirs+=("$(dirname "${medaka_assembly}")")
+elif [[ "${assembly_mode}" == "hybrid with existing long-read assembly (flye)" ]]; then
+    bind_dirs+=("$(dirname "${flye_assembly}")")
 fi
 
 # Create unique bind arguments

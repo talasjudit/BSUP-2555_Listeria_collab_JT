@@ -30,19 +30,14 @@ IFS=',' read -r current_sample nanopore_srr nanopore_path illumina_srr illumina_
 
 echo "Processing sample: ${current_sample}"
 
-# Find assembly files - prioritize Unicycler, then Medaka, then Flye
-unicycler_assembly="${work_dir}/${output_name}/07_assembly_unicycler/${current_sample}_unicycler.fasta"
-medaka_assembly="${work_dir}/${output_name}/06_polish_medaka/${current_sample}_medaka.fasta"
+# Find assembly files - prioritize Unicycler, then Flye
+unicycler_assembly="${work_dir}/${output_name}/06_assembly_unicycler/${current_sample}_unicycler.fasta"
 flye_assembly="${work_dir}/${output_name}/05_assembly_flye/${current_sample}_flye.fasta"
 
 if [[ -f "${unicycler_assembly}" ]]; then
     input_assembly="${unicycler_assembly}"
     assembly_type="unicycler"
     echo "Using Unicycler assembly: ${input_assembly}"
-elif [[ -f "${medaka_assembly}" ]]; then
-    input_assembly="${medaka_assembly}"
-    assembly_type="medaka"
-    echo "Using Medaka assembly: ${input_assembly}"
 elif [[ -f "${flye_assembly}" ]]; then
     input_assembly="${flye_assembly}"
     assembly_type="flye"
@@ -50,14 +45,13 @@ elif [[ -f "${flye_assembly}" ]]; then
 else
     echo "ERROR: No assembly found for sample ${current_sample}"
     echo "Checked: ${unicycler_assembly}"
-    echo "Checked: ${medaka_assembly}"
     echo "Checked: ${flye_assembly}"
     echo "Please run at least one assembly step first"
     exit 1
 fi
 
 # Create output directory using config variables
-output_dir="${work_dir}/${output_name}/08_qc_checkm2"
+output_dir="${work_dir}/${output_name}/07_qc_checkm2"
 mkdir -p ${output_dir}
 tool_log_dir="${log_dir}/checkm2"
 mkdir -p ${tool_log_dir}

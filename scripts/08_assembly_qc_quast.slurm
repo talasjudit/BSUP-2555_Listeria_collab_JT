@@ -34,18 +34,12 @@ echo "Processing sample: ${current_sample}"
 assemblies=()
 assembly_labels=()
 
-unicycler_assembly="${work_dir}/${output_name}/07_assembly_unicycler/${current_sample}_unicycler.fasta"
-medaka_assembly="${work_dir}/${output_name}/06_polish_medaka/${current_sample}_medaka.fasta"
+unicycler_assembly="${work_dir}/${output_name}/06_assembly_unicycler/${current_sample}_unicycler.fasta"
 flye_assembly="${work_dir}/${output_name}/05_assembly_flye/${current_sample}_flye.fasta"
 
 if [[ -f "${unicycler_assembly}" ]]; then
     assemblies+=("${unicycler_assembly}")
     assembly_labels+=("${current_sample}_unicycler")
-fi
-
-if [[ -f "${medaka_assembly}" ]]; then
-    assemblies+=("${medaka_assembly}")
-    assembly_labels+=("${current_sample}_medaka")
 fi
 
 if [[ -f "${flye_assembly}" ]]; then
@@ -56,7 +50,6 @@ fi
 if [[ ${#assemblies[@]} -eq 0 ]]; then
     echo "ERROR: No assemblies found for sample ${current_sample}"
     echo "Checked: ${unicycler_assembly}"
-    echo "Checked: ${medaka_assembly}"
     echo "Checked: ${flye_assembly}"
     echo "Please run at least one assembly step first"
     exit 1
@@ -68,7 +61,7 @@ for i in "${!assemblies[@]}"; do
 done
 
 # Create output directory using config variables
-output_dir="${work_dir}/${output_name}/09_qc_quast"
+output_dir="${work_dir}/${output_name}/08_qc_quast"
 mkdir -p ${output_dir}
 tool_log_dir="${log_dir}/quast"
 mkdir -p ${tool_log_dir}
