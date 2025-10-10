@@ -1,0 +1,4 @@
+work_dir="/path/to/work/dir"          # Main working directory
+singularity_dir="${work_dir}/singularity/sif"  # Container location
+output_name="output"                   # Output subdirectory name
+log_dir="${work_dir}/logs"            # Log files location
