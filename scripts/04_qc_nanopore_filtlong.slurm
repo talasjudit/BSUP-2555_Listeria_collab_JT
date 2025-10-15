@@ -66,9 +66,8 @@ singularity exec \
     --env LC_ALL=C \
     ${singularity_image} \
     filtlong \
-        --min_length 1000 \
-        --keep_percent 90 \
-        --target_bases 500000000 \
+        --min_length 6000 \
+        --keep_percent 95 \
         --verbose \
         ${input_file} \
         2> ${tool_log_dir}/${current_sample}_filtlong.log \
