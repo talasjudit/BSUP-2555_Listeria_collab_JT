@@ -60,9 +60,6 @@ validate_samplesheet() {
     while IFS=',' read -r biosample nanopore_srr nanopore_path illumina_srr illumina_r1_path illumina_r2_path; do
         ((line_num++))
         
-        # Skip header
-        if [[ $line_num -eq 2 ]]; then continue; fi
-        
         # Validate required fields are present
         if [[ -z "$biosample" || -z "$nanopore_srr" || -z "$illumina_srr" ]]; then
             echo "ERROR: Line $line_num missing required fields"
