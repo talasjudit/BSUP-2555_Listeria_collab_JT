@@ -1,28 +1,28 @@
 #!/bin/bash
 
 usage() {
-    echo "Usage: $0 <samplesheet.csv> <job_type> <slurm_script>"
-    echo "  job_type: array|single"
+    echo "Usage: $0 <samplesheet.csv> <slurm_script>"
     echo ""
     echo "Samplesheet format (CSV with header):"
-    echo "  sample,nanopore_run,illumina_run"
-    echo "  SAMN28229381,SRR19183897,SRR19183925"
+    echo "  sample,nanopore_path,illumina_r1_path,illumina_r2_path"
+    echo "  Sample_001,/data/nanopore/sample1.fastq.gz,/data/illumina/sample1_R1.fastq.gz,/data/illumina/sample1_R2.fastq.gz"
     echo ""
-    echo "Array jobs process each sample individually:"
-    echo "  $0 samplesheet.csv array 01_qc_illumina_fastp.slurm"
+    echo "Examples:"
+    echo "  $0 samplesheet.csv 01_qc_illumina_fastp.slurm"
+    echo "  $0 samplesheet.csv 02_qc_illumina_multiqc.slurm"
     echo ""
-    echo "Single jobs process all samples together:"
-    echo "  $0 samplesheet.csv single 02_qc_multiqc.slurm"
+    echo "Job type (array vs single) is automatically detected:"
+    echo "  - Scripts containing 'multiqc' run as single jobs (aggregate all samples)"
+    echo "  - All other scripts run as array jobs (one job per sample)"
     exit 1
 }
 
-if [[ $# -ne 3 ]]; then
+if [[ $# -ne 2 ]]; then
     usage
 fi
 
 SAMPLESHEET="$1"
-JOB_TYPE="$2"
-SLURM_SCRIPT="$3"
+SLURM_SCRIPT="$2"
 
 if [[ ! -f "$SAMPLESHEET" ]]; then
     echo "ERROR: Samplesheet not found: $SAMPLESHEET"
@@ -44,31 +44,39 @@ mkdir -p "$slurm_log_dir"
 validate_samplesheet() {
     local samplesheet="$1"
     
-    # Check header
-    local header=$(head -n1 "$samplesheet")
-    if [[ "$header" != "biosample,nanopore_srr,nanopore_path,illumina_srr,illumina_r1_path,illumina_r2_path" ]]; then
+    # Read and normalize header (remove BOM, CR, whitespace)
+    local header=$(head -n1 "$samplesheet" | sed 's/^\xEF\xBB\xBF//' | tr -d '\r' | tr -d ' \t')
+    
+    if [[ "$header" != "sample,nanopore_path,illumina_r1_path,illumina_r2_path" ]]; then
         echo "ERROR: Invalid samplesheet header."
-        echo "Expected: biosample,nanopore_srr,nanopore_path,illumina_srr,illumina_r1_path,illumina_r2_path"
+        echo "Expected: sample,nanopore_path,illumina_r1_path,illumina_r2_path"
         echo "Got: $header"
         return 1
     fi
     
-    # Count valid hybrid samples
+    # Count valid samples
     local sample_count=0
     local line_num=1
     
-    while IFS=',' read -r biosample nanopore_srr nanopore_path illumina_srr illumina_r1_path illumina_r2_path; do
+    while IFS=',' read -r sample nanopore_path illumina_r1_path illumina_r2_path; do
         ((line_num++))
         
+        # Remove any carriage returns from fields
+        sample=$(echo "$sample" | tr -d '\r')
+        nanopore_path=$(echo "$nanopore_path" | tr -d '\r')
+        illumina_r1_path=$(echo "$illumina_r1_path" | tr -d '\r')
+        illumina_r2_path=$(echo "$illumina_r2_path" | tr -d '\r')
+        
         # Validate required fields are present
-        if [[ -z "$biosample" || -z "$nanopore_srr" || -z "$illumina_srr" ]]; then
-            echo "ERROR: Line $line_num missing required fields"
+        if [[ -z "$sample" || -z "$nanopore_path" || -z "$illumina_r1_path" || -z "$illumina_r2_path" ]]; then
+            echo "ERROR: Line $line_num has missing required fields"
+            echo "Sample: '$sample', Nanopore: '$nanopore_path', R1: '$illumina_r1_path', R2: '$illumina_r2_path'"
             return 1
         fi
         
-        # Check for spaces in biosample names
-        if [[ "$biosample" =~ [[:space:]] ]]; then
-            echo "ERROR: Line $line_num biosample contains spaces: '$biosample'"
+        # Check for spaces in sample names
+        if [[ "$sample" =~ [[:space:]] ]]; then
+            echo "ERROR: Line $line_num - sample name contains spaces: '$sample'"
             echo "Please use underscores or hyphens instead"
             return 1
         fi
@@ -76,9 +84,21 @@ validate_samplesheet() {
         ((sample_count++))
     done < <(tail -n+2 "$samplesheet")
     
+    if [[ $sample_count -eq 0 ]]; then
+        echo "ERROR: No samples found in samplesheet"
+        return 1
+    fi
+    
     echo "$sample_count"
     return 0
 }
+
+# Auto-detect job type based on script name
+if [[ "$script_name" == *"multiqc"* ]]; then
+    JOB_TYPE="single"
+else
+    JOB_TYPE="array"
+fi
 
 # Handle job types
 case "$JOB_TYPE" in
@@ -100,13 +120,12 @@ case "$JOB_TYPE" in
         fi
         
         if [[ $SAMPLE_COUNT -eq 0 ]]; then
-            echo "ERROR: No valid hybrid samples found in samplesheet"
-            echo "Each sample must have both nanopore_run and illumina_run"
+            echo "ERROR: No valid samples found in samplesheet"
             exit 1
         fi
         
         echo "Submitting array job: $script_name"
-        echo "Processing $SAMPLE_COUNT hybrid samples"
+        echo "Processing $SAMPLE_COUNT samples"
         echo "Samplesheet: $SAMPLESHEET" 
         echo "SLURM logs: $slurm_log_dir"
         
@@ -118,10 +137,5 @@ case "$JOB_TYPE" in
             --output="${slurm_log_dir}/${script_name}-%A_%a.out" \
             --error="${slurm_log_dir}/${script_name}-%A_%a.err" \
             "$SLURM_SCRIPT"
-        ;;
-        
-    *)
-        echo "ERROR: Invalid job_type. Use: array|single"
-        exit 1
         ;;
 esac

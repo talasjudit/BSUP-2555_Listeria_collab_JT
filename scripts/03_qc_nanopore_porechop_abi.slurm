@@ -24,15 +24,14 @@ if [[ -z "$sample_line" ]]; then
     exit 1
 fi
 
-# Parse sample information (6 fields)
-IFS=',' read -r current_sample nanopore_srr nanopore_path illumina_srr illumina_r1_path illumina_r2_path <<< "${sample_line}"
+# Parse sample information (4 fields: sample,nanopore_path,illumina_r1_path,illumina_r2_path)
+IFS=',' read -r current_sample nanopore_path illumina_r1_path illumina_r2_path <<< "${sample_line}"
+
+# Remove any trailing carriage returns
+current_sample=$(echo "$current_sample" | tr -d '\r')
+nanopore_path=$(echo "$nanopore_path" | tr -d '\r')
 
 echo "Processing sample: ${current_sample}"
-echo "Nanopore SRR: ${nanopore_srr}"
-
-# Use full path from samplesheet
-nanopore_path="${nanopore_path}"
-
 echo "Nanopore path: ${nanopore_path}"
 
 # Verify input file exists

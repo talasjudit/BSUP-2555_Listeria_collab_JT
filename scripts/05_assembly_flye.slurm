@@ -25,8 +25,11 @@ if [[ -z "$sample_line" ]]; then
     exit 1
 fi
 
-# Parse sample information  (6 fields)
-IFS=',' read -r current_sample nanopore_srr nanopore_path illumina_srr illumina_r1_path illumina_r2_path <<< "${sample_line}"
+# Parse sample information (4 fields: sample,nanopore_path,illumina_r1_path,illumina_r2_path)
+IFS=',' read -r current_sample nanopore_path illumina_r1_path illumina_r2_path <<< "${sample_line}"
+
+# Remove any trailing carriage returns
+current_sample=$(echo "$current_sample" | tr -d '\r')
 
 echo "Processing sample: ${current_sample}"
 
@@ -53,19 +56,25 @@ input_bind_args="--bind ${input_dir}:${input_dir}"
 
 singularity_image="${singularity_dir}/flye-2.9.6.sif"
 
-# Run Flye assembly
+# Build Flye command with optional genome-size parameter
+flye_cmd="flye --nano-hq ${nanopore_input} --out-dir ${output_dir}/${current_sample} --threads ${SLURM_CPUS_PER_TASK}"
+
+# Add genome-size if defined in config (optional since Flye v2.8+)
+if [[ -n "${genome_size}" ]]; then
+    flye_cmd="${flye_cmd} --genome-size ${genome_size}"
+    echo "Using genome size: ${genome_size}"
+else
+    echo "Genome size not specified - Flye will auto-detect"
+fi
+
+# Run Flye assembly (without --meta flag for single isolate genomes)
 echo "Starting Flye assembly for ${current_sample}"
 singularity exec \
     --bind ${work_dir}:${work_dir} \
     ${input_bind_args} \
     ${singularity_image} \
-    flye \
-        --nano-hq ${nanopore_input} \
-        --out-dir ${output_dir}/${current_sample} \
-        --threads ${SLURM_CPUS_PER_TASK} \
-        --genome-size ${genome_size} \
-        --meta \
-        > ${tool_log_dir}/${current_sample}_flye.log 2>&1
+    ${flye_cmd} \
+    > ${tool_log_dir}/${current_sample}_flye.log 2>&1
 
 # Check if assembly succeeded
 if [[ -f "${output_dir}/${current_sample}/assembly.fasta" ]]; then
