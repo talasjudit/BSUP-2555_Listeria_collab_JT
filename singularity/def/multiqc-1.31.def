@@ -2,7 +2,8 @@ Bootstrap: docker
 From: python:3.11-slim
 
 %post
-    pip install multiqc==1.31
-    
+    apt-get update && apt-get install -y --no-install-recommends procps && rm -rf /var/lib/apt/lists/*
+    pip install --no-cache-dir multiqc==1.31
+
 %runscript
     multiqc "$@"

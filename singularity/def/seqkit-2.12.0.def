@@ -1,0 +1,12 @@
+Bootstrap: docker
+From: debian:bullseye-slim
+
+%post
+    apt-get update && apt-get install -y wget procps bc
+    wget https://github.com/shenwei356/seqkit/releases/download/v2.12.0/seqkit_linux_amd64.tar.gz
+    tar -xzf seqkit_linux_amd64.tar.gz -C /usr/local/bin
+    rm seqkit_linux_amd64.tar.gz
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+%environment
+    export PATH="/usr/local/bin:$PATH"

@@ -3,6 +3,7 @@ From: debian:bullseye-slim
 
 %post
     apt-get update && apt-get install -y \
+	procps \
         python3 \
         python3-setuptools \
         perl \
